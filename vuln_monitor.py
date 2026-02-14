@@ -6,17 +6,34 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.units import inch
 
+import zipfile
+from io import BytesIO
+import json
+
 ECOSYSTEMS = ['npm', 'Maven', 'PyPI', 'Go']
 SEVERITY_FILTER = ['CRITICAL', 'HIGH']
 
-def query_osv_vulnerabilities(ecosystem, modified_after):
-    url = 'https://api.osv.dev/v1/query'
-    payload = {
-        'package': {'ecosystem': ecosystem},
-        'modified_after': modified_after
-    }
-    response = requests.post(url, json=payload)
-    return response.json().get('vulns', [])
+def download_ecosystem_vulns(ecosystem, modified_after):
+    """Download and filter vulnerabilities from OSV database dump"""
+    url = f'https://osv-vulnerabilities.storage.googleapis.com/{ecosystem}/all.zip'
+    print(f'  Downloading {ecosystem} database...')
+    
+    try:
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        
+        vulns = []
+        with zipfile.ZipFile(BytesIO(response.content)) as z:
+            for filename in z.namelist()[:500]:  # Limit to first 500 for speed
+                with z.open(filename) as f:
+                    vuln = json.load(f)
+                    # Check if modified recently
+                    if vuln.get('modified', '') >= modified_after:
+                        vulns.append({'id': vuln['id']})
+        return vulns
+    except Exception as e:
+        print(f'  Error downloading {ecosystem}: {e}')
+        return []
 
 def get_vuln_details(vuln_id):
     url = f'https://api.osv.dev/v1/vulns/{vuln_id}'
@@ -116,7 +133,7 @@ def main():
     
     for ecosystem in ECOSYSTEMS:
         print(f'Querying {ecosystem}...')
-        vulns = query_osv_vulnerabilities(ecosystem, modified_after)
+        vulns = download_ecosystem_vulns(ecosystem, modified_after)
         if vulns:
             filtered = filter_by_severity(vulns)
             all_vulns.extend(filtered)
