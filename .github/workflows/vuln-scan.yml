@@ -24,8 +24,12 @@ jobs:
     
     - name: Run vulnerability scan
       run: |
-        python demo.py > /dev/null 2>&1 || true
         python vuln_monitor.py
+    
+    # Uncomment below to test email notifications with demo data
+    # - name: Test email with demo data
+    #   run: |
+    #     python demo.py
     
     - name: Check if report exists
       id: check_report
