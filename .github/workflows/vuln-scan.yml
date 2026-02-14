@@ -50,7 +50,7 @@ jobs:
         server_address: smtp.gmail.com
         server_port: 587
         username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
+        password: ${{ secrets.THREATINTELSECRET }}
         subject: 'Vulnerability Alert: ${{ github.run_number }} Critical/High Issues Found'
         to: ${{ secrets.EMAIL_TO }}
         from: Vulnerability Monitor
