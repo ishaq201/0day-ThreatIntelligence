@@ -1,0 +1,64 @@
+name: Critical Packages Vulnerability Scan
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Run every 12 hours
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Run critical packages scan
+      run: |
+        python critical_packages_monitor.py
+    
+    - name: Check if report exists
+      id: check_report
+      run: |
+        if [ -f critical_packages_report.pdf ]; then
+          echo "report_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "report_exists=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Upload PDF report
+      if: steps.check_report.outputs.report_exists == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: critical-packages-report-${{ github.run_number }}
+        path: critical_packages_report.pdf
+        retention-days: 90
+    
+    - name: Send email notification
+      if: steps.check_report.outputs.report_exists == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.THREATINTELSECRET }}
+        subject: 'CRITICAL: Vulnerabilities in Top Packages - ${{ github.run_number }}'
+        to: ${{ secrets.EMAIL_TO }}
+        from: Critical Packages Monitor
+        body: |
+          Critical/High severity vulnerabilities detected in widely-used packages!
+          
+          Scan Date: ${{ github.run_time }}
+          Report: See attached PDF
+          
+          View full details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        attachments: critical_packages_report.pdf
