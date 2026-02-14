@@ -26,8 +26,17 @@ jobs:
       run: |
         python vuln_monitor.py
     
+    - name: Check if report exists
+      id: check_report
+      run: |
+        if [ -f vuln_report.pdf ]; then
+          echo "report_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "report_exists=false" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Upload PDF report
-      if: always()
+      if: steps.check_report.outputs.report_exists == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: vulnerability-report-${{ github.run_number }}
