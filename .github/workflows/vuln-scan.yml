@@ -2,7 +2,7 @@ name: Daily Vulnerability Scan
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour
+    - cron: '0 */12 * * *'  # Run every 12 hours
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
