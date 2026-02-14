@@ -24,6 +24,7 @@ jobs:
     
     - name: Run vulnerability scan
       run: |
+        python demo.py > /dev/null 2>&1 || true
         python vuln_monitor.py
     
     - name: Check if report exists

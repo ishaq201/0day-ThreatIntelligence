@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 from datetime import datetime
-from tabulate import tabulate
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.units import inch
 
 SAMPLE_VULNERABILITIES = [
     {
@@ -80,68 +83,43 @@ SAMPLE_VULNERABILITIES = [
     }
 ]
 
-def display_report(vulnerabilities):
-    print(f'\n{"="*100}')
-    print(f'Vulnerability Report - {datetime.now().strftime("%Y-%m-%d")} [DEMO]')
-    print(f'Total Critical/High Vulnerabilities: {len(vulnerabilities)}')
-    print(f'{"="*100}\n')
+def generate_pdf_report(vulnerabilities, filename='vuln_report.pdf'):
+    doc = SimpleDocTemplate(filename, pagesize=letter)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, spaceAfter=12)
+    story.append(Paragraph(f'Vulnerability Report - {datetime.now().strftime("%Y-%m-%d")} [TEST]', title_style))
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph(f'Total Critical/High Vulnerabilities: {len(vulnerabilities)}', styles['Normal']))
+    story.append(Spacer(1, 0.3*inch))
     
     for vuln in vulnerabilities:
-        table_data = []
-        
-        table_data.append(['ID', vuln.get('id', 'N/A')])
-        
+        story.append(Paragraph(f"<b>ID:</b> {vuln.get('id', 'N/A')}", styles['Heading2']))
         if vuln.get('aliases'):
-            table_data.append(['Aliases', ', '.join(vuln['aliases'][:3])])
-        
-        table_data.append(['Modified', vuln.get('modified', 'N/A')])
-        table_data.append(['Published', vuln.get('published', 'N/A')])
+            story.append(Paragraph(f"<b>Aliases:</b> {', '.join(vuln['aliases'][:3])}", styles['Normal']))
+        story.append(Paragraph(f"<b>Modified:</b> {vuln.get('modified', 'N/A')}", styles['Normal']))
+        story.append(Paragraph(f"<b>Published:</b> {vuln.get('published', 'N/A')}", styles['Normal']))
         
         severity_info = vuln.get('severity', [])
         if severity_info:
             for sev in severity_info:
-                table_data.append([f"Severity ({sev.get('type', 'N/A')})", sev.get('score', 'N/A')])
+                story.append(Paragraph(f"<b>Severity ({sev.get('type', 'N/A')}):</b> {sev.get('score', 'N/A')}", styles['Normal']))
         
         affected = vuln.get('affected', [])
         if affected:
             pkg = affected[0].get('package', {})
-            table_data.append(['Ecosystem', pkg.get('ecosystem', 'N/A')])
-            table_data.append(['Package', pkg.get('name', 'N/A')])
-            
-            ranges = affected[0].get('ranges', [])
-            if ranges:
-                for r in ranges:
-                    if r.get('type') in ['ECOSYSTEM', 'SEMVER']:
-                        events = r.get('events', [])
-                        if events:
-                            fixed = next((e.get('fixed') for e in events if 'fixed' in e), None)
-                            if fixed:
-                                table_data.append(['Fixed In', fixed])
-            
-            versions = affected[0].get('versions', [])
-            if versions:
-                table_data.append(['Affected Versions', ', '.join(versions)])
+            story.append(Paragraph(f"<b>Ecosystem:</b> {pkg.get('ecosystem', 'N/A')}", styles['Normal']))
+            story.append(Paragraph(f"<b>Package:</b> {pkg.get('name', 'N/A')}", styles['Normal']))
         
-        table_data.append(['Summary', vuln.get('summary', 'N/A')])
-        
-        details = vuln.get('details', '')
-        if details and details != vuln.get('summary'):
-            table_data.append(['Details', details[:200] + '...'])
-        
-        db_specific = vuln.get('database_specific', {})
-        if db_specific and db_specific.get('cwe_ids'):
-            table_data.append(['CWE IDs', ', '.join(db_specific['cwe_ids'])])
-        
-        refs = vuln.get('references', [])
-        if refs:
-            ref_urls = '\n'.join([ref.get('url', 'N/A') for ref in refs[:3]])
-            table_data.append(['References', ref_urls])
-        
-        print(tabulate(table_data, tablefmt='grid', maxcolwidths=[20, 80]))
-        print(f'\n{"-"*100}\n')
+        story.append(Paragraph(f"<b>Summary:</b> {vuln.get('summary', 'N/A')}", styles['Normal']))
+        story.append(Spacer(1, 0.3*inch))
+    
+    doc.build(story)
+
+def display_report(vulnerabilities):
+    print('Test email notification - generating PDF...')
 
 if __name__ == '__main__':
-    print('Generating demo vulnerability report with sample data...')
     display_report(SAMPLE_VULNERABILITIES)
-    print('\nThis demo shows what the report looks like with comprehensive vulnerability data.')
-    print('Run "python vuln_monitor.py" to scan for real vulnerabilities.')
+    generate_pdf_report(SAMPLE_VULNERABILITIES)
