@@ -42,3 +42,23 @@ jobs:
         name: vulnerability-report-${{ github.run_number }}
         path: vuln_report.pdf
         retention-days: 90
+    
+    - name: Send email notification
+      if: steps.check_report.outputs.report_exists == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: 'Vulnerability Alert: ${{ github.run_number }} Critical/High Issues Found'
+        to: ${{ secrets.EMAIL_TO }}
+        from: Vulnerability Monitor
+        body: |
+          New critical/high severity vulnerabilities detected!
+          
+          Scan Date: ${{ github.run_time }}
+          Report: See attached PDF
+          
+          View full details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        attachments: vuln_report.pdf
